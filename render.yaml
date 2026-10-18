@@ -13,7 +13,7 @@ services:
       - key: DATABASE_URL
         sync: false # User pastes Neon.tech connection string
       - key: REDIS_HOST
-        sync: false # User pastes Upstash or Render Redis host
+        value: "none" # Optional: set to Upstash/Render Redis host if configured
       - key: REDIS_PORT
         value: "6379"
       - key: JWT_ACCESS_SECRET

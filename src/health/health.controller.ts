@@ -8,18 +8,31 @@ import { PrismaService } from '../prisma/prisma.service';
 @ApiTags('System & Health')
 @Controller('health')
 export class HealthController implements OnModuleDestroy {
-  private redisClient: Redis;
+  private redisClient: Redis | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
-    this.redisClient = new Redis({
-      host: this.configService.get<string>('REDIS_HOST', 'localhost'),
-      port: this.configService.get<number>('REDIS_PORT', 6379),
-      lazyConnect: true,
-      maxRetriesPerRequest: 1,
-    });
+    const redisHost = this.configService.get<string>('REDIS_HOST');
+    const nodeEnv = this.configService.get<string>('NODE_ENV', 'development');
+
+    // In production without an explicit external redis host, don't attempt localhost connection
+    const shouldConnect =
+      redisHost &&
+      redisHost !== 'none' &&
+      redisHost !== 'disabled' &&
+      !(nodeEnv === 'production' && redisHost === 'localhost');
+
+    if (shouldConnect) {
+      this.redisClient = new Redis({
+        host: redisHost,
+        port: this.configService.get<number>('REDIS_PORT', 6379),
+        lazyConnect: true,
+        maxRetriesPerRequest: 1,
+        connectTimeout: 2000,
+      });
+    }
   }
 
   @Public()
@@ -40,21 +53,26 @@ export class HealthController implements OnModuleDestroy {
       dbStatus = 'unreachable';
     }
 
-    let redisStatus = 'healthy';
+    let redisStatus = 'not_configured';
     let redisLatencyMs = 0;
-    try {
-      if (this.redisClient.status !== 'ready') {
-        await this.redisClient.connect();
+
+    if (this.redisClient) {
+      try {
+        if (this.redisClient.status !== 'ready') {
+          await this.redisClient.connect();
+        }
+        const redisStart = Date.now();
+        await this.redisClient.ping();
+        redisLatencyMs = Date.now() - redisStart;
+        redisStatus = 'healthy';
+      } catch {
+        redisStatus = 'unreachable';
       }
-      const redisStart = Date.now();
-      await this.redisClient.ping();
-      redisLatencyMs = Date.now() - redisStart;
-    } catch {
-      redisStatus = 'unreachable';
     }
 
     const isSystemHealthy =
-      dbStatus === 'healthy' && redisStatus === 'healthy';
+      dbStatus === 'healthy' &&
+      (redisStatus === 'healthy' || redisStatus === 'not_configured');
 
     return {
       status: isSystemHealthy ? 'ok' : 'degraded',
@@ -66,7 +84,10 @@ export class HealthController implements OnModuleDestroy {
         },
         redis: {
           status: redisStatus,
-          latency: `${redisLatencyMs}ms`,
+          latency:
+            redisStatus === 'healthy'
+              ? `${redisLatencyMs}ms`
+              : 'N/A (optional cache)',
         },
       },
       memory: {
