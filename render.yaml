@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: enterprise-rest-api
+    runtime: node
+    plan: free
+    region: singapore # or oregon, frankfurt
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma migrate deploy && node dist/main
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # User pastes Neon.tech connection string
+      - key: REDIS_HOST
+        sync: false # User pastes Upstash or Render Redis host
+      - key: REDIS_PORT
+        value: "6379"
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_EXPIRATION
+        value: 15m
+      - key: JWT_REFRESH_EXPIRATION
+        value: 7d
+      - key: THROTTLE_TTL
+        value: "60"
+      - key: THROTTLE_LIMIT
+        value: "100"
