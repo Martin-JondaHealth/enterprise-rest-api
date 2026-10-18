@@ -1,6 +1,6 @@
 # 🏢 Enterprise REST API — Modular NestJS Backend Platform
 
-[![CI Pipeline](https://github.com/nan-kyaw-thae-su/enterprise-rest-api/actions/workflows/ci.yml/badge.svg)](https://github.com/nan-kyaw-thae-su/enterprise-rest-api/actions)
+[![CI Pipeline](https://github.com/Martin-JondaHealth/enterprise-rest-api/actions/workflows/ci.yml/badge.svg)](https://github.com/Martin-JondaHealth/enterprise-rest-api/actions)
 [![NestJS](https://img.shields.io/badge/NestJS-12-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io)
@@ -96,7 +96,7 @@ graph TD
 
 ### 1. Clone & Install Dependencies
 ```bash
-git clone https://github.com/nan-kyaw-thae-su/enterprise-rest-api.git
+git clone https://github.com/Martin-JondaHealth/enterprise-rest-api.git
 cd enterprise-rest-api
 npm install
 ```
