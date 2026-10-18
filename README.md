@@ -1,124 +1,166 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🏢 Enterprise REST API — Modular NestJS Backend Platform
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+[![CI Pipeline](https://github.com/nan-kyaw-thae-su/enterprise-rest-api/actions/workflows/ci.yml/badge.svg)](https://github.com/nan-kyaw-thae-su/enterprise-rest-api/actions)
+[![NestJS](https://img.shields.io/badge/NestJS-12-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](https://redis.io)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)](https://www.docker.com)
+[![Swagger](https://img.shields.io/badge/OpenAPI-3.0-85EA2D?logo=swagger&logoColor=black)](http://localhost:3000/api/docs)
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+> A production-grade, enterprise-ready backend RESTful API architected around **Domain-Driven Design (DDD)** and **Clean Modular Architecture**, featuring **JWT Authentication**, **Cryptographic Refresh Token Rotation**, **Role-Based Access Control (RBAC)**, **Redis Rate Limiting**, and **Comprehensive E2E Integration Testing**.
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 🏗️ Architecture Overview
 
-## Project setup
+```mermaid
+graph TD
+    Client([Client / Frontend / Swagger UI]) -->|HTTP / HTTPS| Gateway[Global Validation Pipe & Interceptors]
+    Gateway -->|Rate Limiting Guard| Throttler[Redis-Backed Throttler]
+    Gateway -->|JWT Auth & RBAC Guards| Controller[Controllers: Auth, Users, Health]
+    
+    subgraph "Core Business Layer"
+        Controller --> AuthService[AuthService]
+        Controller --> UsersService[UsersService]
+        Controller --> HealthService[Health Check]
+    end
+    
+    subgraph "Data & Cache Layer"
+        AuthService -->|ORM Queries| Prisma[Prisma ORM]
+        UsersService -->|ORM Queries| Prisma
+        Prisma -->|Port 5434| Postgres[(PostgreSQL 16)]
+        HealthService -->|Ping / Query| Postgres
+        HealthService -->|Ping / Latency| RedisDB[(Redis 7)]
+    end
 
-```bash
-$ npm install
+    subgraph "Global Transformers"
+        Controller -->|Format Success| TransformInterceptor["TransformInterceptor<br/>{ success: true, data, error: null }"]
+        Controller -->|Catch Error| ExceptionFilter["HttpExceptionFilter<br/>{ success: false, data: null, error }"]
+    end
 ```
 
-## Compile and run the project
+---
 
+## ✨ Key Enterprise Capabilities
+
+1. **Security & Authentication Flow:**
+   - **Dual-Token Architecture:** Short-lived access tokens (15m) paired with long-lived refresh tokens (7d).
+   - **Cryptographic Refresh Token Rotation (RFC 7519):** Every token refresh invalidates the previously used refresh token and issues a unique JWT with `jti` (JWT ID). Automatic detection of token reuse invalidates all active sessions for the compromised user account.
+   - **One-Way Password Hashing:** Securely salted password hashes utilizing `bcrypt`.
+2. **Role-Based Access Control (RBAC):**
+   - Three hierarchical roles: `ADMIN`, `MEMBER`, and `VIEWER`.
+   - Granular route protection using custom `@Roles(...)` metadata decorators and NestJS `RolesGuard`.
+3. **Resilience & Rate Limiting:**
+   - Distributed rate limiting using `@nestjs/throttler` backed by Redis to prevent brute-force attacks and API abuse.
+4. **Standardized API Response Envelope:**
+   - Consistent JSON envelope on all endpoints:
+   ```json
+   {
+     "success": true,
+     "data": { ... },
+     "error": null,
+     "timestamp": "2026-10-18T13:00:00.000Z"
+   }
+   ```
+5. **OpenAPI / Swagger 3.0 Documentation:**
+   - Interactive UI at `/api/docs` with Bearer auth injection and typed DTO schemas.
+6. **Deep Observability & Health Checks:**
+   - `/api/v1/health` validates active database query execution and Redis latency metrics.
+
+---
+
+## 📡 API Endpoints Matrix
+
+| Module | Method | Path | Access | Description |
+| :--- | :---: | :--- | :---: | :--- |
+| **System** | `GET` | `/api/v1/health` | Public | System uptime, RAM metrics, DB & Redis latency |
+| **Auth** | `POST` | `/api/v1/auth/register` | Public | Register user account with default `MEMBER` role |
+| **Auth** | `POST` | `/api/v1/auth/login` | Public | Authenticate user; returns tokens and profile |
+| **Auth** | `POST` | `/api/v1/auth/refresh` | Public | Exchange and rotate refresh token for new pair |
+| **Auth** | `POST` | `/api/v1/auth/logout` | Authenticated | Revoke session and refresh token |
+| **Auth** | `GET` | `/api/v1/auth/me` | Authenticated | Retrieve current user profile and role |
+| **Users** | `GET` | `/api/v1/users` | `ADMIN` | List all users and profiles |
+| **Users** | `GET` | `/api/v1/users/:id` | `ADMIN, MEMBER, VIEWER` | Get user details by ID |
+| **Users** | `PATCH` | `/api/v1/users/:id/role` | `ADMIN` | Update a user's role (Admin, Member, Viewer) |
+| **Users** | `PATCH` | `/api/v1/users/:id/status` | `ADMIN` | Activate or suspend user account |
+
+---
+
+## 🛠️ Quickstart & Local Setup
+
+### Prerequisites
+- [Node.js](https://nodejs.org) >= 20.x
+- [Docker & Docker Compose](https://www.docker.com)
+
+### 1. Clone & Install Dependencies
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+git clone https://github.com/nan-kyaw-thae-su/enterprise-rest-api.git
+cd enterprise-rest-api
+npm install
 ```
 
-## Run tests
-
+### 2. Configure Environment Variables
+Copy `.env.example` into `.env`:
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp .env.example .env
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+### 3. Start Database & Redis via Docker
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose up -d
+```
+*PostgreSQL is exposed on port `5434` and Redis on port `6379`.*
+
+### 4. Run Migrations & Seed Demo Accounts
+```bash
+npx prisma migrate dev
+npx prisma db seed
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+**Seeded Credentials:**
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **ADMIN** | `admin@enterprise.dev` | `AdminPass123!` |
+| **MEMBER** | `member@enterprise.dev` | `MemberPass123!` |
+| **VIEWER** | `viewer@enterprise.dev` | `ViewerPass123!` |
 
-## Observability
+### 5. Launch Development Server
+```bash
+npm run start:dev
+```
+- API Base URL: `http://localhost:3000/api/v1`
+- Swagger Documentation: `http://localhost:3000/api/docs`
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+---
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project:
+## 🧪 Testing
 
 ```bash
-$ npm install @nestjs/observe
+# Run unit tests
+npm run test
+
+# Run End-to-End (E2E) integration test suites
+npm run test:e2e
+
+# Run linter
+npm run lint
+
+# Check test coverage
+npm run test:cov
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/overview) - it takes a single import and an app key.
+---
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+## 🚀 Deployment
 
-## Resources
+The project is structured for easy deployment to containerized platforms:
+- **Database:** Serverless PostgreSQL via [Neon.tech](https://neon.tech)
+- **Redis:** [Upstash](https://upstash.com) Serverless Redis
+- **App Service:** [Render](https://render.com) Web Service with Dockerfile or Node.js runtime
 
-Check out a few resources that may come in handy when working with NestJS:
+---
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+## 📄 License
+MIT
